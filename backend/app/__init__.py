@@ -1,0 +1,29 @@
+from flask import Flask
+from flask_cors import CORS
+
+from app.config.settings import get_config
+from app.database.connection import db, init_db
+from app.middleware.error_handlers import register_error_handlers
+from app.routes import register_routes
+
+
+def create_app(config_name=None):
+    """Application factory for creating Flask app instances."""
+    app = Flask(__name__)
+    app.config.from_object(get_config(config_name))
+
+    CORS(
+        app,
+        origins=app.config["CORS_ORIGINS"],
+        supports_credentials=True,
+    )
+
+    db.init_app(app)
+    register_error_handlers(app)
+    register_routes(app)
+
+    with app.app_context():
+        app.config["UPLOAD_FOLDER"].mkdir(parents=True, exist_ok=True)
+        init_db()
+
+    return app
