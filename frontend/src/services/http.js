@@ -1,40 +1,6 @@
-function getApiRoot() {
-  return import.meta.env.VITE_API_URL?.replace(/\/+$/, '') ?? ''
-}
+import { buildApiUrl, resolveApiUrl } from '../config/api'
 
-export function buildApiUrl(endpoint) {
-  const path = endpoint.startsWith('/') ? endpoint : `/${endpoint}`
-  const apiPath = path.startsWith('/api') ? path : `/api${path}`
-  const apiRoot = getApiRoot()
-
-  if (apiRoot) {
-    return `${apiRoot}${apiPath}`
-  }
-
-  return apiPath
-}
-
-export function getApiBaseUrl() {
-  const apiRoot = getApiRoot()
-  return apiRoot ? `${apiRoot}/api` : '/api'
-}
-
-export function resolveApiUrl(path) {
-  if (!path || path.startsWith('http://') || path.startsWith('https://')) {
-    return path
-  }
-
-  const apiRoot = getApiRoot()
-  if (apiRoot && path.startsWith('/api')) {
-    return `${apiRoot}${path}`
-  }
-
-  if (apiRoot) {
-    return buildApiUrl(path)
-  }
-
-  return path
-}
+export { API_BASE_URL, buildApiUrl, getApiRoot, resolveApiUrl } from '../config/api'
 
 export async function downloadAuthenticatedFile(filePath, downloadName) {
   const response = await fetch(resolveApiUrl(filePath), {
@@ -91,7 +57,7 @@ async function parseResponse(response) {
 
 function connectionErrorMessage() {
   if (import.meta.env.DEV) {
-    return 'Unable to reach the server. Make sure the backend is running on port 5000.'
+    return 'Unable to reach the server. Make sure the backend is running locally.'
   }
 
   return 'Unable to reach the server. Please try again later.'

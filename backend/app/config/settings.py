@@ -11,11 +11,46 @@ INSTANCE_DIR.mkdir(exist_ok=True)
 DEFAULT_DB_PATH = INSTANCE_DIR / "sansu_lms.db"
 
 
+def normalize_database_url(url):
+    """Normalize DATABASE_URL for SQLAlchemy and Supabase/Render PostgreSQL."""
+    if not url:
+        return f"sqlite:///{DEFAULT_DB_PATH}"
+
+    normalized = url.strip()
+
+    if normalized.startswith("postgres://"):
+        normalized = normalized.replace("postgres://", "postgresql://", 1)
+
+    if normalized.startswith("postgresql://") and "+psycopg" not in normalized:
+        normalized = normalized.replace("postgresql://", "postgresql+psycopg://", 1)
+
+    if "supabase.co" in normalized and "sslmode=" not in normalized:
+        separator = "&" if "?" in normalized else "?"
+        normalized = f"{normalized}{separator}sslmode=require"
+
+    return normalized
+
+
+def database_engine_options(database_url):
+    """Connection pool settings for PostgreSQL deployments."""
+    if database_url.startswith("sqlite"):
+        return {}
+
+    return {
+        "pool_pre_ping": True,
+        "pool_recycle": 280,
+    }
+
+
+_RESOLVED_DATABASE_URL = normalize_database_url(os.getenv("DATABASE_URL", ""))
+
+
 class Config:
     """Base application configuration."""
 
     SECRET_KEY = os.getenv("SECRET_KEY", "dev-secret-key")
-    SQLALCHEMY_DATABASE_URI = os.getenv("DATABASE_URL") or f"sqlite:///{DEFAULT_DB_PATH}"
+    SQLALCHEMY_DATABASE_URI = _RESOLVED_DATABASE_URL
+    SQLALCHEMY_ENGINE_OPTIONS = database_engine_options(_RESOLVED_DATABASE_URL)
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     SESSION_COOKIE_HTTPONLY = True
     SESSION_COOKIE_SAMESITE = "Lax"
