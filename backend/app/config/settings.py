@@ -37,6 +37,18 @@ def local_sqlite_url() -> str:
     return f"sqlite:///{LOCAL_SQLITE_PATH}"
 
 
+def is_deployed_environment() -> bool:
+    """True when the API runs on a hosted platform (Render, etc.), not local dev."""
+    if os.getenv("FLASK_ENV", "").strip().lower() == "production":
+        return True
+
+    if os.getenv("RENDER", "").strip().lower() in {"true", "1", "yes"}:
+        return True
+
+    configured_db = os.getenv("DATABASE_URL", "").strip()
+    return configured_db.startswith(("postgres://", "postgresql://"))
+
+
 def resolve_database_url(*, require_postgres: bool = False) -> str:
     """
     Resolve the database connection string.
@@ -133,13 +145,25 @@ config_by_name = {
 
 def get_config(config_name=None):
     """Return the configuration class for the given environment."""
-    env = config_name or os.getenv("FLASK_ENV", "development")
+    deployed = is_deployed_environment()
+    env = config_name or os.getenv("FLASK_ENV", "production" if deployed else "development")
     base_config = config_by_name.get(env, DevelopmentConfig)
-    database_url = resolve_database_url(require_postgres=(env == "production"))
+    if deployed and base_config is DevelopmentConfig:
+        base_config = ProductionConfig
+
+    database_url = resolve_database_url(require_postgres=deployed)
     db_config = _build_config(database_url)
 
-    return type(
+    config_class = type(
         f"{base_config.__name__}WithDatabase",
         (db_config, base_config),
         {},
     )
+
+    if deployed:
+        # Vercel (frontend) and Render (API) are different sites; cookies need SameSite=None.
+        config_class.SESSION_COOKIE_SECURE = True
+        config_class.SESSION_COOKIE_SAMESITE = "None"
+        config_class.DEBUG = False
+
+    return config_class
