@@ -4,6 +4,11 @@
   "installCommand": "npm install --prefix frontend",
   "buildCommand": "npm run build --prefix frontend",
   "outputDirectory": "frontend/dist",
+  "build": {
+    "env": {
+      "VITE_API_URL": "https://aura-learning-management-system.onrender.com"
+    }
+  },
   "rewrites": [
     {
       "source": "/(.*)",

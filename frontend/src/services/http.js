@@ -1,13 +1,36 @@
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '/api'
+function getApiRoot() {
+  return import.meta.env.VITE_API_URL?.replace(/\/+$/, '') ?? ''
+}
+
+export function buildApiUrl(endpoint) {
+  const path = endpoint.startsWith('/') ? endpoint : `/${endpoint}`
+  const apiPath = path.startsWith('/api') ? path : `/api${path}`
+  const apiRoot = getApiRoot()
+
+  if (apiRoot) {
+    return `${apiRoot}${apiPath}`
+  }
+
+  return apiPath
+}
+
+export function getApiBaseUrl() {
+  const apiRoot = getApiRoot()
+  return apiRoot ? `${apiRoot}/api` : '/api'
+}
 
 export function resolveApiUrl(path) {
   if (!path || path.startsWith('http://') || path.startsWith('https://')) {
     return path
   }
 
-  if (API_BASE_URL.startsWith('http')) {
-    const origin = new URL(API_BASE_URL).origin
-    return `${origin}${path}`
+  const apiRoot = getApiRoot()
+  if (apiRoot && path.startsWith('/api')) {
+    return `${apiRoot}${path}`
+  }
+
+  if (apiRoot) {
+    return buildApiUrl(path)
   }
 
   return path
@@ -66,6 +89,14 @@ async function parseResponse(response) {
   return data
 }
 
+function connectionErrorMessage() {
+  if (import.meta.env.DEV) {
+    return 'Unable to reach the server. Make sure the backend is running on port 5000.'
+  }
+
+  return 'Unable to reach the server. Please try again later.'
+}
+
 export async function apiRequest(endpoint, options = {}) {
   const config = {
     credentials: 'include',
@@ -78,9 +109,9 @@ export async function apiRequest(endpoint, options = {}) {
 
   let response
   try {
-    response = await fetch(`${API_BASE_URL}${endpoint}`, config)
+    response = await fetch(buildApiUrl(endpoint), config)
   } catch {
-    throw new Error('Unable to reach the server. Make sure the backend is running on port 5000.')
+    throw new Error(connectionErrorMessage())
   }
 
   return parseResponse(response)
@@ -89,13 +120,13 @@ export async function apiRequest(endpoint, options = {}) {
 export async function apiUpload(endpoint, formData, { method = 'POST' } = {}) {
   let response
   try {
-    response = await fetch(`${API_BASE_URL}${endpoint}`, {
+    response = await fetch(buildApiUrl(endpoint), {
       method,
       credentials: 'include',
       body: formData,
     })
   } catch {
-    throw new Error('Unable to reach the server. Make sure the backend is running on port 5000.')
+    throw new Error(connectionErrorMessage())
   }
 
   return parseResponse(response)
