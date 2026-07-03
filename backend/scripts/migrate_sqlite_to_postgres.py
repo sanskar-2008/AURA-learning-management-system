@@ -25,8 +25,7 @@ BACKEND_DIR = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(BACKEND_DIR))
 
 from app import create_app  # noqa: E402
-from app.config.settings import DEFAULT_DB_PATH, normalize_database_url  # noqa: E402
-from app.database.connection import db  # noqa: E402
+from app.config.settings import LOCAL_SQLITE_PATH, normalize_database_url  # noqa: E402
 
 TABLE_COPY_ORDER = [
     "users",
@@ -53,7 +52,7 @@ def _resolve_sqlite_path() -> Path:
     configured = os.getenv("SQLITE_PATH", "").strip()
     if configured:
         return Path(configured).expanduser().resolve()
-    return DEFAULT_DB_PATH
+    return LOCAL_SQLITE_PATH
 
 
 def _resolve_target_url() -> str:
@@ -110,8 +109,7 @@ def migrate() -> None:
 
     app = create_app()
     with app.app_context():
-        print("Creating PostgreSQL schema...")
-        db.create_all()
+        print("PostgreSQL schema ready (Alembic migrations applied).")
 
         source_metadata = MetaData()
         source_metadata.reflect(bind=source_engine)

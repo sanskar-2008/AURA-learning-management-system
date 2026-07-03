@@ -1,6 +1,6 @@
 from flask import current_app
 
-from app.config.settings import DEFAULT_DB_PATH
+from app.config.settings import LOCAL_SQLITE_PATH
 
 
 def get_health_status():
@@ -12,7 +12,7 @@ def get_health_status():
             "status": "healthy",
             "service": "aura-course-api",
             "database": "sqlite",
-            "database_path": str(DEFAULT_DB_PATH),
+            "database_path": str(LOCAL_SQLITE_PATH),
         }
 
     if database_url.startswith("postgresql"):

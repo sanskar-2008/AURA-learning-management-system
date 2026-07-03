@@ -30,11 +30,6 @@ def main() -> None:
                 f"Expected PostgreSQL, got {dialect}. Set DATABASE_URL to your Supabase URI."
             )
 
-        db.create_all()
-        from app.services.auth_service import seed_admin_user
-
-        seed_admin_user()
-
         print(f"PostgreSQL schema ready ({dialect}).")
         print("Default admin: admin@gmail.com / admin123")
 
