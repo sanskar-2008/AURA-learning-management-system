@@ -9,6 +9,10 @@ load_dotenv(BASE_DIR / ".env")
 
 INSTANCE_DIR.mkdir(exist_ok=True)
 DEFAULT_DB_PATH = INSTANCE_DIR / "sansu_lms.db"
+DEFAULT_CORS_ORIGINS = (
+    "http://localhost:5173,"
+    "https://aura-learning-management-system.vercel.app"
+)
 
 
 def normalize_database_url(url):
@@ -36,10 +40,16 @@ def database_engine_options(database_url):
     if database_url.startswith("sqlite"):
         return {}
 
-    return {
+    options = {
         "pool_pre_ping": True,
         "pool_recycle": 280,
     }
+
+    # Supabase pooler (port 6543) works best without prepared statements.
+    if "supabase.co" in database_url:
+        options["connect_args"] = {"prepare_threshold": None}
+
+    return options
 
 
 _RESOLVED_DATABASE_URL = normalize_database_url(os.getenv("DATABASE_URL", ""))
@@ -57,7 +67,8 @@ class Config:
     SESSION_COOKIE_SECURE = False
     CORS_ORIGINS = [
         origin.strip()
-        for origin in os.getenv("CORS_ORIGINS", "http://localhost:5173").split(",")
+        for origin in os.getenv("CORS_ORIGINS", DEFAULT_CORS_ORIGINS).split(",")
+        if origin.strip()
     ]
     UPLOAD_FOLDER = INSTANCE_DIR / "uploads" / "materials"
     UPLOAD_ASSIGNMENTS_FOLDER = INSTANCE_DIR / "uploads" / "assignments"
@@ -82,6 +93,7 @@ class ProductionConfig(Config):
     DEBUG = False
     ENV = "production"
     SESSION_COOKIE_SECURE = True
+    SESSION_COOKIE_SAMESITE = "None"
 
 
 config_by_name = {

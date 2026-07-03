@@ -11,16 +11,14 @@ const LOCAL_BACKEND_URL = 'http://127.0.0.1:5000'
 
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, __dirname, '')
-  const viteApiUrl =
-    env.VITE_API_URL ||
+  const resolvedApiUrl =
+    env.VITE_API_URL?.trim() ||
     (mode === 'production' ? DEFAULT_PRODUCTION_API_URL : '')
 
   return {
     plugins: [react(), tailwindcss()],
     envDir: __dirname,
-    define: {
-      'import.meta.env.VITE_API_URL': JSON.stringify(viteApiUrl),
-    },
+    envPrefix: 'VITE_',
     server: {
       port: 5173,
       proxy: {
@@ -29,6 +27,9 @@ export default defineConfig(({ mode }) => {
           changeOrigin: true,
         },
       },
+    },
+    define: {
+      'import.meta.env.VITE_API_URL': JSON.stringify(resolvedApiUrl),
     },
   }
 })

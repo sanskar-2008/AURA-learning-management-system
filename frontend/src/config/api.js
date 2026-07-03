@@ -1,31 +1,45 @@
-export const DEFAULT_PRODUCTION_API_URL =
-  'https://aura-learning-management-system.onrender.com'
+/**
+ * Production API host. Baked in at build time via VITE_API_URL.
+ * Local dev uses the Vite proxy when this is empty.
+ */
+const PRODUCTION_API_ROOT = 'https://aura-learning-management-system.onrender.com'
+
+function readConfiguredApiRoot() {
+  const value = import.meta.env.VITE_API_URL
+  if (typeof value === 'string' && value.trim()) {
+    return value.trim().replace(/\/+$/, '')
+  }
+  return ''
+}
 
 export function getApiRoot() {
-  const configured = import.meta.env.VITE_API_URL?.trim()
+  const configured = readConfiguredApiRoot()
   if (configured) {
-    return configured.replace(/\/+$/, '')
+    return configured
   }
 
   if (import.meta.env.PROD) {
-    return DEFAULT_PRODUCTION_API_URL
+    return PRODUCTION_API_ROOT
   }
 
   return ''
 }
-
-export const API_BASE_URL = getApiRoot() ? `${getApiRoot()}/api` : '/api'
 
 export function buildApiUrl(endpoint) {
   const apiRoot = getApiRoot()
   const path = endpoint.startsWith('/') ? endpoint : `/${endpoint}`
   const apiPath = path.startsWith('/api') ? path : `/api${path}`
 
-  if (apiRoot) {
-    return `${apiRoot}${apiPath}`
+  if (!apiRoot) {
+    return apiPath
   }
 
-  return apiPath
+  return `${apiRoot}${apiPath}`
+}
+
+export function getApiBaseUrl() {
+  const apiRoot = getApiRoot()
+  return apiRoot ? `${apiRoot}/api` : '/api'
 }
 
 export function resolveApiUrl(path) {
@@ -34,13 +48,13 @@ export function resolveApiUrl(path) {
   }
 
   const apiRoot = getApiRoot()
-  if (apiRoot && path.startsWith('/api')) {
+  if (!apiRoot) {
+    return path
+  }
+
+  if (path.startsWith('/api')) {
     return `${apiRoot}${path}`
   }
 
-  if (apiRoot) {
-    return buildApiUrl(path)
-  }
-
-  return path
+  return buildApiUrl(path)
 }

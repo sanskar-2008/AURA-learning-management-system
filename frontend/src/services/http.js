@@ -1,6 +1,44 @@
-import { buildApiUrl, resolveApiUrl } from '../config/api'
+import { buildApiUrl, getApiBaseUrl, getApiRoot, resolveApiUrl } from '../config/api'
 
-export { API_BASE_URL, buildApiUrl, getApiRoot, resolveApiUrl } from '../config/api'
+export { buildApiUrl, getApiBaseUrl, getApiRoot, resolveApiUrl }
+
+async function parseResponse(response) {
+  const text = await response.text()
+  let data = null
+
+  if (text) {
+    try {
+      data = JSON.parse(text)
+    } catch {
+      throw new Error('Received an invalid response from the server.')
+    }
+  }
+
+  if (!response.ok) {
+    const error = new Error(data?.message || `Request failed (${response.status})`)
+    error.errors = data?.errors
+    error.status = response.status
+    throw error
+  }
+
+  if (data === null) {
+    throw new Error('Received an empty response from the server.')
+  }
+
+  return data
+}
+
+function connectionErrorMessage(error) {
+  if (import.meta.env.DEV) {
+    return 'Unable to reach the server. Make sure the backend is running locally.'
+  }
+
+  if (error instanceof TypeError) {
+    return 'Unable to reach the API. Check that CORS_ORIGINS on Render includes your Vercel URL.'
+  }
+
+  return 'Unable to reach the server. Please try again later.'
+}
 
 export async function downloadAuthenticatedFile(filePath, downloadName) {
   const response = await fetch(resolveApiUrl(filePath), {
@@ -29,41 +67,8 @@ export async function downloadAuthenticatedFile(filePath, downloadName) {
   URL.revokeObjectURL(objectUrl)
 }
 
-async function parseResponse(response) {
-  const text = await response.text()
-  let data = null
-
-  if (text) {
-    try {
-      data = JSON.parse(text)
-    } catch {
-      throw new Error('Received an invalid response from the server.')
-    }
-  }
-
-  if (!response.ok) {
-    const error = new Error(data?.message || `Request failed (${response.status})`)
-    error.errors = data?.errors
-    error.status = response.status
-    throw error
-  }
-
-  if (data === null) {
-    throw new Error('Received an empty response from the server.')
-  }
-
-  return data
-}
-
-function connectionErrorMessage() {
-  if (import.meta.env.DEV) {
-    return 'Unable to reach the server. Make sure the backend is running locally.'
-  }
-
-  return 'Unable to reach the server. Please try again later.'
-}
-
 export async function apiRequest(endpoint, options = {}) {
+  const url = buildApiUrl(endpoint)
   const config = {
     credentials: 'include',
     headers: {
@@ -75,24 +80,26 @@ export async function apiRequest(endpoint, options = {}) {
 
   let response
   try {
-    response = await fetch(buildApiUrl(endpoint), config)
-  } catch {
-    throw new Error(connectionErrorMessage())
+    response = await fetch(url, config)
+  } catch (error) {
+    throw new Error(connectionErrorMessage(error))
   }
 
   return parseResponse(response)
 }
 
 export async function apiUpload(endpoint, formData, { method = 'POST' } = {}) {
+  const url = buildApiUrl(endpoint)
+
   let response
   try {
-    response = await fetch(buildApiUrl(endpoint), {
+    response = await fetch(url, {
       method,
       credentials: 'include',
       body: formData,
     })
-  } catch {
-    throw new Error(connectionErrorMessage())
+  } catch (error) {
+    throw new Error(connectionErrorMessage(error))
   }
 
   return parseResponse(response)
