@@ -17,6 +17,7 @@ backend/instance/
 # Build output
 frontend/dist/
 frontend/.vite/
+.vercel/
 
 # IDE & OS
 .idea/
